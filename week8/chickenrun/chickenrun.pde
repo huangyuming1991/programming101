@@ -1,162 +1,284 @@
-// global variables
-float x, y, size;
-float startY, endY;
-float laneGap;
-float [] carSpeed;
-float [] carX;
+//game start
+PImage titleImg, startNormalImg, startHoveredImg;
+//game run
+PImage groundhogIdleImg, groundhogDownImg, groundhogRightImg, groundhogLeftImg;
+PImage backgroundImg, backgroundFrontImg, lifeImg, cabbageImg, soldierImg;
+//game lose
+PImage gameoverImg, restartNormalImg, restartHoveredImg;
 
-int nbrCar = 5;
-int life = 3;
 
-final int GAME_START = 1;
-final int GAME_WIN = 2;
-final int GAME_LOSE = 3;
-final int GAME_RUN = 4;
-final int DIE = 5;
-int gameState;
+//game run
+int backgroundFrontPosY;
+int soldierPosX;
+int soldierPosY;
+int soldierSpeed = 3;
 
-// Sprites
-PImage imgChicken, imgGhost, imgEgg;
-PImage [] imgCars;
-PImage imgWin, imgLose;
+int cabbagePosX;
+int cabbagePosY;
+boolean eatCabbage = false;
 
-void setup(){
-  size(400,400);
-  textFont(createFont("font/Square_One.ttf", 20));  
-  textAlign(CENTER);
-  
-  carX = new float[nbrCar];
-  carSpeed = new float[nbrCar];
-  
-  size = 40;
-  laneGap = size+10;
-  x = width/2;
-  y = 0;  
-  startY = 0;
-  endY = laneGap*(nbrCar+1);
-  
-  imgCars = new PImage[nbrCar];
-  for (int i=0; i<nbrCar; i++){
-    imgCars[i] = loadImage("data/car"+i+".png");
-    carX[i] = width;
-    carSpeed[i] = random(1,5);
-  }
-  imgChicken = loadImage("data/chicken.png");
-  imgGhost = loadImage("data/ghost.png");
-  imgEgg = loadImage("data/egg.png");
-  imgWin = loadImage("data/win.png");
-  imgLose = loadImage("data/lose.png");
+int lifePoint;
+int lifeInitPos = 10;
+int lifeMargin = 20;
 
-  // start game
-  gameState = GAME_START;
+int grassHeight = 15;
+int sunInnerRadious = 60;
+int sunOutterRadious = 70;
+int sunMargin = 50;
+
+boolean rightPressed = false;
+boolean leftPressed = false;
+boolean downPressed = false;
+
+float blockWidth;
+float blockHeight;
+
+float groundhogPosX;
+float groundhogPosY;
+
+boolean isMoving = false;
+float moveFrame = 0; //count current frames
+float moveFrameLimit = 15; // 1 secend 60 frames, 0.25 second 15 frames 
+
+
+int gameState = 0;
+
+void setup() {
+	size(640, 480, P2D);
+  loadAllImages();
+	initGameRunScene();
 }
 
-void draw(){
+void draw() {
+  // Switch Game State
   switch (gameState){
-   case GAME_START:
-       background(10,110,16);
-       text("Press Enter", width/2, height/2);    
-       break;
-   case GAME_RUN:
-       background(10,110,16);
-       
-       // start and end area
-       fill(4,13,78);
-       rect(0,startY,width,laneGap);
-       rect(0,endY, width, laneGap);
-       
-       // show life
-       for(int i=0;i<life;i++){
-           image(imgEgg,i*size,height-laneGap);
+    case 0:// Game Start
+      showGameStartScene();
+      break;
+    case 1:// Game Run
+      showGameRunScene();
+      break;
+    case 2:// Game Lose
+      showGameLoseScene();
+      break;
+  }	
+}
+
+void keyPressed(){
+  // Switch move State
+  if(!isMoving){
+    switch (keyCode){
+      case RIGHT:
+        if(groundhogPosX < width-groundhogIdleImg.width){ //limit position
+          isMoving = true;
+          rightPressed = true;
         }
-       // show chicken
-       image(imgChicken, x, y);
-       
-       // check destination 
-       if (y >= endY){
-          // increase car speed
-          for (int i=0; i<nbrCar; i++){
-            carSpeed[i] ++;
-          }
-          gameState = GAME_WIN;
-       }
-       
-       // cars
-       for (int i=0; i<nbrCar; i++){
-         float carY = (i+1)*laneGap;
-         carX[i] -= carSpeed[i];
-         // boundary detection
-         if (carX[i] < 0){
-           carX[i] = width;
-         }
-         // show cars
-         image(imgCars[i],carX[i],carY);
-         // hit Test
-         if (x+size > carX[i] && x < carX[i]+size &&
-             y+size > carY && y < carY+size){
-             // decrease life
-             life--;
-             gameState = DIE;
-         }
-        }        
-       break;
-   case DIE:
-       // check life
-       if (life <= 0){
-          // reset car speed
-          for (int i=0; i<nbrCar; i++){
-            carSpeed[i] = random(1,5);
-          }
-         gameState = GAME_LOSE;
-       }
-       image(imgGhost, x, y);
-       break;
-   case GAME_WIN:
-       background(0);
-       image(imgWin,width/4,height/4);
-       fill(255);
-       text("You Win !!",width/2,height/4);
-       break;
-   case GAME_LOSE:
-       background(0);
-       image(imgLose,width/4,height/4);
-       fill(255);
-       text("You Lose",width/2,height/4);    
-       break;
+        break;
+      case LEFT:
+        if(groundhogPosX > 0){ //limit position
+          isMoving = true;
+          leftPressed = true;
+          break;
+        }
+      case DOWN: 
+        if(groundhogPosY < height-groundhogIdleImg.height){ //limit position
+          isMoving = true;
+          downPressed = true;
+          break;
+        }
+    }
   }
 }
-void keyPressed() {
-    if (key == CODED && gameState == GAME_RUN) {
-     switch(keyCode) {
-     case UP:
-       y -= laneGap;
-       break;
-     case DOWN:
-       y += laneGap;
-       break;
-     case LEFT:
-       x -= laneGap;
-       break;
-     case RIGHT:
-       x += laneGap;
-       break;  
-     }
+
+void showGameStartScene(){
+  imageMode(CORNER);
+  image(titleImg, 0, 0);
+  boolean mouseHoverStart = mouseX>248 && mouseX<392 && mouseY>360 && mouseY<420; 
+  if(mouseHoverStart){
+    image(startHoveredImg, 248, 360);
+    if(mousePressed){
+      gameState = 1;
     }
-    
-    // boundary
-    x = (x<0) ? 0 : x;
-    x = (x>width-laneGap) ? width-laneGap : x;
-    y = (y<0) ? 0 : y;
-    y = (y>height) ? height : y;
-    
-    if(key==ENTER && gameState != GAME_RUN){
-      if (gameState == GAME_LOSE){
-         // restart the game
-         life=3; 
+  }else{
+    image(startNormalImg, 248, 360);
+  }
+}
+
+
+void showGameRunScene(){
+  //game run background
+  imageMode(CORNER);
+  image(backgroundImg, 0, 0);
+  image(backgroundFrontImg, 0, backgroundFrontPosY);
+  
+  //grass
+  noStroke();
+  rectMode(CORNER);
+  fill(124, 204, 25);
+  rect(0, backgroundFrontPosY-grassHeight, width, grassHeight);
+  
+  //sun
+  strokeWeight(5);
+  stroke(255, 255, 0);
+  fill(253, 184, 19);
+  ellipse(width-sunMargin, sunMargin, sunInnerRadious*2, sunInnerRadious*2);
+  
+  //life
+  int lifeMove = lifeMargin+lifeImg.width;
+  for(int i=0; i< lifePoint; i++){
+    image(lifeImg, lifeInitPos+lifeMove*i, lifeInitPos);
+  }
+  
+  //soldier
+  image(soldierImg, soldierPosX, soldierPosY);
+  soldierPosX += soldierSpeed;
+  if(soldierPosX>width){
+    soldierPosX = -soldierImg.width;
+  }
+  
+  //cabbage
+  if(!eatCabbage){
+    image(cabbageImg, cabbagePosX, cabbagePosY);
+  }
+  
+  //groundhog
+  moveGroundhog();
+  //collide soldier
+  isTouchItem(0);
+  //collide cabbage
+  isTouchItem(1);
+}
+
+void showGameLoseScene(){
+  imageMode(CORNER);
+  image(gameoverImg, 0, 0);
+  boolean mouseHoverStart = mouseX>248 && mouseX<392 && mouseY>360 && mouseY<420; 
+  if(mouseHoverStart){
+    image(restartHoveredImg, 248, 360);
+    if(mousePressed){
+      initGameRunScene();
+      gameState = 1;
+    }
+  }else{
+    image(restartNormalImg, 248, 360);
+  }
+}
+
+
+void moveGroundhog(){
+  if(rightPressed){
+    groundhogPosX += blockWidth/moveFrameLimit;
+    image(groundhogRightImg, groundhogPosX, groundhogPosY);
+  }else if(leftPressed){
+    groundhogPosX -= blockWidth/moveFrameLimit;
+    image(groundhogLeftImg, groundhogPosX, groundhogPosY);
+  }else if(downPressed){
+    groundhogPosY += blockHeight/moveFrameLimit;
+    image(groundhogDownImg, groundhogPosX, groundhogPosY);
+  }else{
+    image(groundhogIdleImg, groundhogPosX, groundhogPosY);
+  }
+   if(groundhogPosX<0){
+            groundhogPosX=0;
+          }
+          if(groundhogPosX>560){
+            groundhogPosX=560;
+          }
+          if(groundhogPosY>400){
+            groundhogPosY=400;
+          }
+  if(isMoving){
+    moveFrame++;
+    if(moveFrame == 15){
+      endMove();
+    }
+  }
+}
+
+void endMove(){
+  rightPressed = false;
+  leftPressed = false;
+  downPressed = false;
+  isMoving = false;
+  moveFrame = 0;
+}
+
+void isTouchItem(int item){
+  boolean isTouchX;
+  boolean isTouchY;
+  if(item == 0){ // soldier
+    isTouchX = abs(groundhogPosX - soldierPosX) < groundhogIdleImg.width*0.7;
+    isTouchY = abs(groundhogPosY - soldierPosY) < groundhogIdleImg.height*0.7; 
+    if(isTouchX && isTouchY){ // touch soldier
+      endMove();
+      lifePoint--;
+      initGroundhog();
+      if(lifePoint == 0){
+        gameState= 2;
       }
-      
-       x = width/2;
-       y = startY;
-       gameState = GAME_RUN;
     }
+  }else{ //cabbage
+    isTouchX = abs(groundhogPosX - cabbagePosX) < groundhogIdleImg.width*0.7;
+    isTouchY = abs(groundhogPosY - cabbagePosY) < groundhogIdleImg.height*0.7; 
+    if(isTouchX && isTouchY){ // touch cabbage
+      if(lifePoint < 3){
+        cabbagePosX = 0;
+        cabbagePosY = 0;
+        eatCabbage = true;
+        lifePoint++;
+      }
+    }
+  }
+}
+
+void initGameRunScene(){
+  //game run init
+  eatCabbage = false;
+  lifePoint = 2;
+  
+  //background
+  backgroundFrontPosY = height-backgroundFrontImg.height;
+  
+  //soldier
+  soldierPosX = -soldierImg.width;
+  soldierPosY = backgroundFrontPosY+ (backgroundFrontImg.height/4)*(floor(random(4)));
+  
+  //cabbage
+  cabbagePosY = backgroundFrontPosY+ (backgroundFrontImg.height/4)*(floor(random(4)));
+  cabbagePosX = width/8*(floor(random(8)));
+  
+  //block size
+  blockWidth = backgroundFrontImg.width/8;
+  blockHeight = backgroundFrontImg.height/4;
+  
+  initGroundhog();
+}
+
+void initGroundhog(){
+  groundhogPosX = blockWidth*4;
+  groundhogPosY = backgroundFrontPosY-blockWidth;
+}
+
+
+void loadAllImages(){
+  //start
+  titleImg = loadImage("img/title.jpg");
+  startNormalImg = loadImage("img/startNormal.png");
+  startHoveredImg = loadImage("img/startHovered.png");
+  
+  //run
+  backgroundImg = loadImage("img/bg.jpg");
+  backgroundFrontImg = loadImage("img/soil.png");
+  lifeImg = loadImage("img/life.png");
+  cabbageImg = loadImage("img/cabbage.png");
+  soldierImg = loadImage("img/soldier.png");
+  groundhogIdleImg = loadImage("img/groundhogIdle.png");
+  groundhogDownImg = loadImage("img/groundhogDown.png");
+  groundhogRightImg = loadImage("img/groundhogRight.png");
+  groundhogLeftImg = loadImage("img/groundhogLeft.png");
+  
+  //lose
+  gameoverImg = loadImage("img/gameover.jpg");
+  restartNormalImg = loadImage("img/restartNormal.png");
+  restartHoveredImg = loadImage("img/restartHovered.png");
 }
